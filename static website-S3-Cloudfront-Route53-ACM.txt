@@ -1,0 +1,139 @@
+Here's a detailed, step-by-step guide to deploying a static website to AWS using S3, Route 53, CloudFront, and ACM:
+
+Phase 1: S3 Setup (Storage)
+
+1. Create an S3 Bucket:
+- Sign in to the AWS Management Console and navigate to the S3 service.
+- Click "Create bucket."
+- Bucket name: Enter your domain name (e.g., www.yourdomain.com). This is crucial for Route 53 integration.
+- AWS Region: Choose a region close to your target audience.
+- Object Ownership: It is usually best to select ACLs disabled, and Object ownership set to Bucket owner enforced.
+- Block Public Access settings for this bucket: Uncheck "Block all public access." Then acknowledge the warning message.
+- Bucket Versioning: Leave disabled.
+- Tags (Optional): Add tags for organization.
+- Default encryption: Leave disabled.
+- Click "Create bucket."
+- Create a second bucket that is the root domain. (e.g. yourdomain.com).
+
+2. Upload Website Files:
+- Select your www.yourdomain.com bucket.
+- Click "Upload" and upload your website's HTML, CSS, JavaScript, images, and other static files.
+
+3. Configure Static Website Hosting:
+- Go to the "Properties" tab of your www.yourdomain.com bucket.
+- Scroll down to "Static website hosting" and click "Edit."
+- Select "Enable."
+- Hosting type: "Host a static website."
+- Index document: Enter index.html (or your main HTML file).
+- Error document (optional): Enter error.html (or a custom error page).
+- Click "Save changes."
+- Repeat the static website hosting enablement for the root domain bucket.
+
+4. Bucket Policy for Public Access:
+- Go to the "Permissions" tab of your www.yourdomain.com bucket.
+- Under "Bucket policy," click "Edit."
+- Paste the following policy, replacing your-bucket-name with your actual bucket name:
+
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "PublicReadGetObject",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::www.yourdomain.com/*"
+        },
+        {
+            "Sid": "PublicReadGetObjectRoot",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::yourdomain.com/*"
+        }
+    ]
+}
+
+- Click "Save changes."
+- Repeat for the root domain bucket, changing the resource ARN accordingly.
+
+
+Phase 2: Route 53 Setup (DNS)
+
+1. Register a Domain Name (if you don't have one):
+- In the Route 53 service, click "Registered domains."
+- Click "Register domain" and follow the instructions.
+
+2. Create a Hosted Zone:
+- In the Route 53 service, click "Hosted zones."
+- Click "Create hosted zone."
+- Domain name: Enter your domain name (e.g., yourdomain.com).
+- Type: "Public hosted zone."
+- Click "Create hosted zone."
+
+3. Create Alias Records:
+- In your hosted zone, click "Create record."
+- Create an "A" record for the root domain.
+- Record name: Leave blank (for the root domain).
+- Record type: "A - Routes traffic to an IPv4 address and some AWS resources."
+- Alias: "Alias to S3 website endpoint"
+- Region: Select the region of your S3 bucket.
+- S3 website endpoint: select the correct S3 endpoint for the root domain bucket.
+- Click "Create records"
+- Create an "A" record for the www subdomain.
+- Record name: www
+- Record type: "A - Routes traffic to an IPv4 address and some AWS resources."
+- Alias: "Alias to S3 website endpoint"
+- - Region: Select the region of your S3 bucket.
+- S3 website endpoint: select the correct S3 endpoint for the www domain bucket.
+- Click "Create records"
+
+
+Phase 3: ACM Setup (SSL/TLS Certificates)
+
+1. Request a Certificate:
+- Navigate to the AWS Certificate Manager (ACM) service.
+- Click "Request a certificate."
+- Request type: "Request a public certificate."
+- Click "Next."
+- Fully qualified domain name: Add yourdomain.com and www.yourdomain.com.
+- Validation method: "DNS validation" (recommended).
+- Click "Request."
+
+2. DNS Validation:
+- ACM will provide CNAME records.
+- Go back to your Route 53 hosted zone.
+- Create CNAME records for each domain name, using the values provided by ACM.
+- Wait for the certificate status to change to "Issued" (this may take some time).
+
+
+Phase 4: CloudFront Setup (CDN)
+
+1. Create a CloudFront Distribution:
+- Navigate to the CloudFront service.
+- Click "Create distribution."
+- Origin domain: select the www.yourdomain.com S3 static website endpoint. Do not select the bucket itself, select the website endpoint.
+- Origin protocol policy: "HTTP Only."
+- Viewer protocol policy: "Redirect HTTP to HTTPS."
+- Alternate domain name (CNAME): Add www.yourdomain.com.
+- Custom SSL certificate: select the ACM certificate you created.
+- Default root object (optional): index.html.
+- Click "Create distribution."
+- Repeat the creation of a cloudfront distribution for the root domain using the root domain S3 static website endpoint, and root domain alternate CNAME.
+
+2. Update Route 53 Alias Records:
+- Go back to your Route 53 hosted zone.
+- Edit the "A" records you created earlier.
+- Change the "Alias target" to the CloudFront distribution domain name.
+- Click "Save record."
+
+Important Notes:
+
+- DNS propagation may take some time.
+- Ensure your S3 bucket policy is correctly configured.
+- CloudFront distributions also take time to deploy.
+- It is very important to use the S3 static website endpoint, and not the S3 bucket itself, when configuring cloudfront.
+- Ensure that your domain names match exactly throughout the process.
+
+This comprehensive guide should help you deploy your static website successfully.
