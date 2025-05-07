@@ -13,7 +13,7 @@ This bucket policy allows anyone (the wildcard "*" in the "Principal" field) to 
                 "s3:GetObject"
             ],
             "Resource": [
-                "arn:aws:s3:::afroitsolutions.click/*"
+                "arn:aws:s3:::www.afroitsolutions.click/*"
             ]
         }
     ]
